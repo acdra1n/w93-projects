@@ -4,7 +4,7 @@ Performance Tweaker for Windows 93
 Created by inverted cat#1194
 */
 
-(function() {
+(async function() {
     // App resources
     /*************************************************************************************************/
 
@@ -13,6 +13,7 @@ Created by inverted cat#1194
     var profiles = {
         high_performance: {
             name: "High Performance",
+            description: "Highest Performance profile.<br><br>Disables window animations, window shadow, some gradient colors, and uses a solid color as background.",
             cssApply: `/* Perf Tweaker High Performance Profile */
             .ui_window {
                 box-shadow: 1px 0 #000, 0 1px #000, 1px 1px #000, inset 1px 1px #fff;
@@ -34,6 +35,7 @@ Created by inverted cat#1194
 
         balanced: {
             name: "Balanced",
+            description: "Balanced profile.<br><br>Disables window animations and reduces the window shadow.",
             cssApply: `/* Perf Tweaker Balanced Profile */
             .ui_window {
                 box-shadow: 1px 0 #000, 0 1px #000, 1px 1px #000, inset 1px 1px #fff, 0 0 10px 1px rgba(255,0,255,.5);
@@ -43,18 +45,19 @@ Created by inverted cat#1194
 
         normal: {
             name: "Normal",
+            description: "Normal profile.<br><br>Windows 93 default settings.",
             cssApply: ``
         }
     }
 
     // Resources (main window html and specs)
 
-    var W_SIZE = {
+    const W_SIZE = {
         height: 320,
         width: 450
     }
 
-    var W_HTML = `
+    const W_HTML = `
 <div style="padding: 10px;">
     <b>Welcome to Performance Tweaker!</b><br><br>
     Using this tool, you can improve the graphical performance of Windows 93 on your computer.<br>
@@ -66,9 +69,11 @@ Created by inverted cat#1194
     Current Profile: <span class="current-profile">(None)</span>
     <br>
     <br>
-    <button class="pb_hperf">High Performance</button>
-    <button class="pb_bal">Balanced</button>
-    <button class="pb_norm">Normal</button>
+    <div class="profiles">
+        <!--<button class="pb_hperf">High Performance</button>
+        <button class="pb_bal">Balanced</button>
+        <button class="pb_norm">Normal</button>-->
+    </div>
     <br>
     <br>
     <div class="explanation" style="box-sizing: border-box;width: 100%;height: 68px;border-style: inset;border-width: 1px;padding: 5px;"></div>
@@ -76,7 +81,7 @@ Created by inverted cat#1194
     <br>
     
     <div style="display: flex;">
-        <button style="margin-left: auto;">Apply and Reboot</button>
+        <button style="margin-left: auto;">Save and Reboot</button>
     </div>
 </div>
 `;
@@ -100,9 +105,45 @@ Created by inverted cat#1194
     }
 
 
-    var appWindow = $window("about:blank");
+    const appWindow = $window("about:blank");
 
     // Functions
+
+    /**
+     * Setup file system for app (create default files with profiles, etc.)
+     */
+    async function fsSetup() {
+        // Create README file
+        if($fs.utils.exist("/a/.config/perf_twk/README.txt") !== 0) {
+            await localforage.setItem(".config/perf_twk/README.txt", `Performance Tweaker configuration directory
+===========================================
+profiles.json - Stores all profiles to be used.
+
+
+Creating custom profiles
+========================
+As of this version, there is no UI to do this (WIP).
+To create your own profile, add an entry to the root JSON object that looks something like this:
+
+  "profile_name": {
+    "name": "Profile Name",
+    "description": "Profile Description",
+    "cssApply": "/* CSS code to change visual effects */"
+  }
+
+When done correctly, your new profile should show up next time you launch Performance Tweaker.
+If you want to restore default profiles, simply delete profiles.json and restart Performance Tweaker. A new profiles.json file should be created.`);
+        }
+
+        // Write profiles json
+        if($fs.utils.exist("/a/.config/perf_twk/profiles.json") !== 0)
+            await localforage.setItem(".config/perf_twk/profiles.json", JSON.stringify(profiles, null, 4));
+        else
+            profiles = JSON.parse(await localforage.getItem(".config/perf_twk/profiles.json"));
+        
+        // Write tweaks json
+
+    }
 
     /**
      * Applies the specified tweaks to the current session.
@@ -127,6 +168,7 @@ Created by inverted cat#1194
 
         appWindow.changeTitle("Performance Tweaker");
         appWindow.changeSize(W_SIZE);
+        appWindow.changeIcon("https://github.com/acdra1n/w93-projects/raw/master/perftweaker/resources/icons/PerfTwk16.png");
         appWindow.el.base.style.top = ((window.innerHeight / 2) - (W_SIZE.height / 2)).toString() + "px";
         appWindow.el.base.style.left = ((window.innerWidth / 2) - (W_SIZE.width / 2)).toString() + "px";
         appWindow.el.body.innerHTML = W_HTML;
@@ -134,47 +176,46 @@ Created by inverted cat#1194
 
         appWindow.cfg.onclose = function() {
             window._pt_open = false;
+            if(window._pt_config.currentProfile)
+                applyTweaks(window._pt_config.currentProfile); // Reset to previous profile
+            else
+                applyTweaks("normal");
         }
 
         // Setup window controls
 
-        var curProfileLbl = appWindow.el.body.querySelector(".current-profile");
-        var explanationLbl = appWindow.el.body.querySelector(".explanation");
-        var hperfBtn = appWindow.el.body.querySelector(".pb_hperf");
-        var balBtn = appWindow.el.body.querySelector(".pb_bal");
-        var normalBtn = appWindow.el.body.querySelector(".pb_norm");
+        const curProfileLbl = appWindow.el.body.querySelector(".current-profile");
+        const explanationLbl = appWindow.el.body.querySelector(".explanation");
+        const profilesContainer = appWindow.el.body.querySelector(".profiles");
+
+        // Iterate through profiles
+        const profileKeys = Object.keys(profiles);
+        profileKeys.forEach((profileKey)=>{
+            // Create button for profile and assign events
+            (function(profile, key){
+                const button = document.createElement("button");
+                button.innerText = profile.name;
+
+                button.onmouseenter = function() {
+                    explanationLbl.innerHTML = profile.description;
+                }
+
+                button.onclick = function() {
+                    applyTweaks(key);
+                }
+
+                // Add button to profiles container
+                profilesContainer.appendChild(button);
+            })(profiles[profileKey], profileKey);
+        });
 
         if(window._pt_config.currentProfile == null)
             curProfileLbl.innerText = "(none)";
         else
             curProfileLbl.innerText = profiles[window._pt_config.currentProfile].name;
-    
-        // Set explanations
-        hperfBtn.onmouseenter = function() {
-            explanationLbl.innerHTML = "Highest Performance profile.<br><br>Disables window animations, window shadow, some gradient colors, and uses a solid color as background.";
-        }
-
-        balBtn.onmouseenter = function() {
-            explanationLbl.innerHTML = "Balanced profile.<br><br>Disables window animations and reduces the window shadow.";
-        }
-
-        normalBtn.onmouseenter = function() {
-            explanationLbl.innerHTML = "Normal profile.<br><br>Windows 93 default settings.";
-        }
-
-        // Set button events
-        hperfBtn.onclick = function() {
-            applyTweaks("high_performance");
-        }
-
-        balBtn.onclick = function() {
-            applyTweaks("balanced");
-        }
-
-        normalBtn.onclick = function() {
-            applyTweaks("normal");
-        }
     }
+
+    await fsSetup();
 
     // Setup app
     app();
