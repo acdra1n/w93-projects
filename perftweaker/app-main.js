@@ -30,7 +30,8 @@ Created by inverted cat#1194
 
             .skin_background {
                 background: #837CFF !important;
-            }`
+            }`,
+            jsApply: ""
         },
 
         balanced: {
@@ -40,13 +41,15 @@ Created by inverted cat#1194
             .ui_window {
                 box-shadow: 1px 0 #000, 0 1px #000, 1px 1px #000, inset 1px 1px #fff, 0 0 10px 1px rgba(255,0,255,.5);
                 animation-duration: 0s !important;
-            }`
+            }`,
+            jsApply: ""
         },
 
         normal: {
             name: "Normal",
             description: "Normal profile.<br><br>Windows 93 default settings.",
-            cssApply: ``
+            cssApply: ``,
+            jsApply: ""
         }
     }
 
@@ -81,7 +84,7 @@ Created by inverted cat#1194
     <br>
     
     <div style="display: flex;">
-        <button style="margin-left: auto;">Save and Reboot</button>
+        <button style="margin-left: auto;" class="btn_reboot">Save and Reboot</button>
     </div>
 </div>
 `;
@@ -104,8 +107,8 @@ Created by inverted cat#1194
         }
     }
 
-
     const appWindow = $window("about:blank");
+    var selectedProfile = "normal";
 
     // Functions
 
@@ -140,9 +143,6 @@ If you want to restore default profiles, simply delete profiles.json and restart
             await localforage.setItem(".config/perf_twk/profiles.json", JSON.stringify(profiles, null, 4));
         else
             profiles = JSON.parse(await localforage.getItem(".config/perf_twk/profiles.json"));
-        
-        // Write tweaks json
-
     }
 
     /**
@@ -187,6 +187,28 @@ If you want to restore default profiles, simply delete profiles.json and restart
         const curProfileLbl = appWindow.el.body.querySelector(".current-profile");
         const explanationLbl = appWindow.el.body.querySelector(".explanation");
         const profilesContainer = appWindow.el.body.querySelector(".profiles");
+        const rebootBtn = appWindow.el.body.querySelector(".btn_reboot");
+
+        rebootBtn.onclick = function() {
+            // Generate startup JS file
+            $store.set("boot/_pt_user.js", `
+/**
+ * Performance tweaker loader file
+ * */
+
+window._pt_config = {
+    currentProfile: "${selectedProfile}"
+};
+
+(async function() {
+    const profiles = JSON.parse(await localforage.getItem(".config/perf_twk/profiles.json"));
+    const pftwEl = document.createElement('style');
+    pftwEl.setAttribute("id", "_ptwk_cssApply");
+    pftwEl.innerHTML = profiles[window._pt_config.currentProfile].cssApply;
+    document.body.appendChild(pftwEl);
+})();`);
+            document.location.reload();
+        }
 
         // Iterate through profiles
         const profileKeys = Object.keys(profiles);
@@ -201,6 +223,8 @@ If you want to restore default profiles, simply delete profiles.json and restart
                 }
 
                 button.onclick = function() {
+                    selectedProfile = profileKey;
+                    curProfileLbl.innerText = profile.name;
                     applyTweaks(key);
                 }
 
