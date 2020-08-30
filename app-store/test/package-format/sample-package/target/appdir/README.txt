@@ -1,0 +1,1 @@
+This file was placed in the application directory.
