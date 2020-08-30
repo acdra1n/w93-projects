@@ -258,7 +258,8 @@ Created by inverted cat#1194
         categories: "Utility",
         exec: _pt_app,
         icon: "//github.com/acdra1n/w93-projects/raw/master/perftweaker/resources/icons/PerfTwk16.png",
-        name: "Performance Tweaker"
+        name: "Performance Tweaker",
+        cats: ['Windows 94', 'Accessories>System Tools', 'Control Panel']
     };
 
     // Create shortcut on desktop (but only on first run)
