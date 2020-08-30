@@ -62,11 +62,6 @@ Created by inverted cat#1194
 
         // Resources (main window html and specs)
 
-        const W_SIZE = {
-            height: 320,
-            width: 450
-        }
-
         const W_HTML = `
     <div style="padding: 10px;">
         <b>Welcome to Performance Tweaker!</b><br><br>
@@ -114,7 +109,17 @@ Created by inverted cat#1194
             }
         }
 
-        const appWindow = $window("about:blank");
+        const appWindow = $window({
+            url: "about:blank",
+            title: "Performance Tweaker",
+            icon: "https://github.com/acdra1n/w93-projects/raw/master/perftweaker/resources/icons/PerfTwk16.png",
+            height: 320,
+            width: 450,
+            resizable: false,
+            maximizable: false,
+            minimizable: false
+        });
+
         var selectedProfile = "normal";
 
         // Functions
@@ -173,13 +178,7 @@ Created by inverted cat#1194
         function app() {
             // Setup main window
 
-            appWindow.changeTitle("Performance Tweaker");
-            appWindow.changeSize(W_SIZE);
-            appWindow.changeIcon("https://github.com/acdra1n/w93-projects/raw/master/perftweaker/resources/icons/PerfTwk16.png");
-            appWindow.el.base.style.top = ((window.innerHeight / 2) - (W_SIZE.height / 2)).toString() + "px";
-            appWindow.el.base.style.left = ((window.innerWidth / 2) - (W_SIZE.width / 2)).toString() + "px";
             appWindow.el.body.innerHTML = W_HTML;
-            appWindow.cfg.resizable = false;
 
             appWindow.cfg.onclose = function() {
                 window._pt_open = false;
