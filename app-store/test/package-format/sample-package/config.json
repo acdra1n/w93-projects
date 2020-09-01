@@ -2,5 +2,12 @@
     "uninstall": {
         "fsdelete": true,
         "paths": []
-    }
+    },
+	"shortcuts": [
+	    {
+			"path": "/a/desktop/wow",
+			"exe": "textarea",
+			"icon": "idk lol"
+		}
+	]
 }
